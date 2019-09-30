@@ -12,6 +12,7 @@ Author: Mustapha Tidoo Yussif
 
 #define READ_END 0
 #define WRITE_END 1
+#define PI 3.14159
 
 double areaPolygon(int type, double dimension);
 int main(int argc, char * argv []){
@@ -68,7 +69,7 @@ int main(int argc, char * argv []){
           int type = atoi(argv[1]);
           double dim = atof(argv[2]);
           double area = areaPolygon(type, dim);
-          printf("The area of the polygon with %d sides is %lf\n", type, area);
+          printf("The area of the polygon with %d sides is %.2lf\n", type, area);
 
           //Write type 
           write(fd[WRITE_END], &type, sizeof(type)); 
@@ -90,7 +91,7 @@ double areaPolygon(int type, double dimension){
     (dimension x dimension x type)/4 x tan(180/dimension)
     */
     double num = (dimension * dimension * type);
-    double denum = 4 * tan(180/type);
+    double denum = 4 * tan(PI/type);
     double area = num/ denum; 
 
     return area;
