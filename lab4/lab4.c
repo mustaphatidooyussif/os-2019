@@ -69,7 +69,7 @@ int main(int argc, char * argv []){
           int type = atoi(argv[1]);
           double dim = atof(argv[2]);
           double area = areaPolygon(type, dim);
-          printf("The area of the polygon with %d sides is %.2lf\n", type, area);
+          printf("The area of the polygon with %d sides is %.2lf sq. unit\n", type, area);
 
           //Write type 
           write(fd[WRITE_END], &type, sizeof(type)); 
