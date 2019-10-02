@@ -15,6 +15,7 @@ Author: Mustapha Tidoo Yussif
 #define PI 3.14159
 
 double areaPolygon(int type, double dimension);
+
 int main(int argc, char * argv []){
 
     /*Should take two arguements <type> <dimension>*/
