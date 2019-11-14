@@ -32,3 +32,15 @@ int main(int argc, const char *argv[])
 
     return 0;
 }
+
+
+// int filefd = open("foo.txt", O_WRONLY|O_CREAT, 0666);
+// if (!fork()) {
+//   close(1);//Close stdout
+//   dup(filefd);
+//   execlp("ls", "ls", NULL);
+// } else {
+//   close(filefd);
+//   wait(NULL);
+// }
+// return 0;
