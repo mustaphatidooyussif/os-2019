@@ -1,3 +1,7 @@
+/*
+Mustapha Tidoo Yussif
+*/
+
 #include <stdio.h> 
 #include <stdlib.h> 
 

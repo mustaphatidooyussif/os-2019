@@ -24,6 +24,7 @@ int main(int argc, char * argv[]){
         fprintf(stderr, "Memory not allocated \n");
         exit(1);
     }
+    
     for (int i=0; i < num_process; i ++){
         printf("Enter the burst time: ");
         scanf("%d", &bt[i]);

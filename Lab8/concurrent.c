@@ -1,66 +1,44 @@
-/*
-Mustapha Tidoo Yussif
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 
 
-/*
-Singly linked list implementation
-*/
-typedef struct __node_t{
+//NOde struct
+typedef struct __Node{
     int val;
-    struct __node_t *next;
-} node_t;
+    struct __Node *next;
+} Node;
 
-node_t *start = NULL; //head of the singly linked list
-int list_size = 0;
+Node *start = NULL; //head of the singly linked list
+int size = 0;
 
 /*
-insert() adds the value at the head(first)
+addToFirst() method adds to beginning of list.
 */
-void insert(int value){
+void addToFirst(int value){
     //Allocate memory equal to node size
-    node_t *n = malloc(sizeof(node_t));
-
-    if (n == NULL){
-        fprintf(stderr, "Cannot allocate memory");
-        exit(1);
-    }
+    Node *n = malloc(sizeof(Node));
     
     n->val = value;   //set value of node
     n->next = start;  //set next of node
     start = n; 
-    list_size =  list_size + 1;
-    return;
-}
+    size =  size + 1;
+    }
 
-void printLinkedList(){
+void print_list(){
 
     if (start == NULL){
         return;
     }
 
     while (start->next != NULL){
-        printf(" %d -> ", start->val);
+        printf(" %d ", start->val);
         start = start->next; 
     }
     printf(" %d \n", start->val);
 }
 
-void freeMemory(){
-    if(start == NULL){
-        return;
-    }
-
-    while (start !=NULL){
-        node_t * temp = start;         
-        start = start->next;
-        free(temp);
-    }
-}
 typedef struct __lock_t{
 	/*The flag of the lock*/
 	int flag;
@@ -95,20 +73,19 @@ void* run(){
 	for(int i = 0; i < loops; i++){
 		//Enter code here
 		lock(&mutex);
-        insert(list_size);
+        addToFirst(size);
 		//Enter code here
 		unlock(&mutex);
 	}
-    return NULL;
+	return NULL;
 }
 
 //have a main function with 2 threads 
 //that concurrently print the value of the flags.
 int main(int argc, char * argv[]){
 
-    /*Should take 1 arguements <program> <loop_count>*/
     if(argc !=2){
-        fprintf(stderr, "Usage: <program> <loop_count> \n");
+        fprintf(stderr, "Usage: <file> <loop> \n");
         exit(EXIT_FAILURE);
     }
 
@@ -124,12 +101,18 @@ int main(int argc, char * argv[]){
 		pthread_join(threads[i],NULL);
 	}
 
-	printf("The value of list_size is: %d\n", list_size);
+	printf("The value of size is: %d\n", size);
 
-    printf("The list is: "); 
-    printLinkedList();
+    print_list();
 
-    freeMemory();
+    //release momery
+    if(start != NULL){
+        while (start !=NULL){
+            Node * temp = start;         
+            start = start->next;
+            free(temp);
+        }
+    }
 
 	return 0;
 }
