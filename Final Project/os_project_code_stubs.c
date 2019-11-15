@@ -7,6 +7,7 @@
 #include <pthread.h>
 
 #define NTHREADS 10
+#define COMMANDS 900
 
 
 //creating a global array to keep track of the commands that are being provided by the user
@@ -14,10 +15,13 @@ char *commands[900];
 char *directories[900];
 int num_of_commands = 0;
 int num_elements_command = 0;
+int path_index = 0;
 
-//the commandstruct structure is meant to contain the number of commands and the array of commands
+//the commandstruct structure is meant to contain the number of commands 
+//and the array of commands
 typedef struct __mycommands{
-	
+	  //char *builtin_commands[] = {"exit", "cd", "path"};
+	  //num_of_commands = 3; 
 	} __mycommands;
 
 //concat() function is meant to concatenate 2 strings(i.e path and filename) into 1 string.
@@ -28,14 +32,15 @@ char *concat(char *s1,char *s2){
 
 //path() provides different paths that a file can be located in and executed.
 void path(){
-	
+	printf("Path is called");
+
 	}
 	
 	
 	
 //cd() changes the currennt directory of the wish bash shell
 void cd(char *d){
-	
+	printf("Cd is called");
 	}
 	
 	
@@ -51,10 +56,17 @@ int execute_file(){
 	
 	}
 
+int is_builtin_command(char *arg){
+	
+}
+
 //the execute_command() function is responsble for executing the command and the parameters passed into the function.
 void *execute_command(void *arg){
+	//check if its a built in command or not
+
 	
 	}
+
 
 //check_file() function checks to see if a file can be found in any of the directories and if it is executable
 int check_file(char *c){
@@ -68,10 +80,41 @@ int parallel_check_file(char *c){
 
 
 
-//stringInput() function splits the input provided by the user into tokens and places them in an array
-int split_input(char *s){
-	
+//stringInput() function splits the input provided by the user into tokens and places 
+//them in an array
+char ** get_command(char *s){
+    //char **command = malloc(8 * sizeof(char *));
+	char * command[10];
+    char *separator = " ";
+    char *parsed;
+    int index = 0;
+
+    if(command == NULL){
+        printf("Out of memory");
+        exit(1);
+    }
+
+    parsed = strtok(input, separator);  //split with the strsep method instead
+    while (parsed != NULL) {
+        command[index] = parsed;
+        index++;
+
+        parsed = strtok(NULL, separator);
+    }
+
+    command[index] = NULL;
+	return command;
 	}
+
+}
+
+//helper function to print content of string array
+void print_array(char **arr){
+	int size = sizeof(arr)/sizeof(arr[0]);
+	for(int i; i<size; i ++ ){
+		printf("%s", arr[i]);
+	}
+}
 
 //the check_redirect() function checks to see whether the commands that the user provides contains '>'
 int check_redirect(){
@@ -98,5 +141,21 @@ int parallel_commands(){
 	
 //the main function of the wish command is going to simulate a shell program.
 int main(int argc,char *argv[]){
+	size_t command_len = 40; 
+	size_t character_len; 
+	char *command; 
+	command = (char *) malloc(command_len * sizeof(char)); //command
 	
+	while(1){
+		printf("Wish > ");
+		character_len = getline(&command, &command_len, stdin);  //get the command 
+		printf("%s", command);
+
+		char **output = get_command(command);
+		print_array(output);
+		break;
+	}
+
+	free(command);
+	return 0;
 	}

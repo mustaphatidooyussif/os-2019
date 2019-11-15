@@ -10,7 +10,7 @@ typedef struct __Node{
     struct __Node *next;
 } Node;
 
-Node *start = NULL; //head of the singly linked list
+Node *head = NULL; //head of the singly linked list
 int size = 0;
 
 /*
@@ -21,22 +21,22 @@ void addToFirst(int value){
     Node *n = malloc(sizeof(Node));
     
     n->val = value;   //set value of node
-    n->next = start;  //set next of node
-    start = n; 
+    n->next = head;  //set next of node
+    head = n; 
     size =  size + 1;
     }
 
 void print_list(){
 
-    if (start == NULL){
+    if (head == NULL){
         return;
     }
 
-    while (start->next != NULL){
-        printf(" %d ", start->val);
-        start = start->next; 
+    while (head->next != NULL){
+        printf(" %d ", head->val);
+        head = head->next; 
     }
-    printf(" %d \n", start->val);
+    printf(" %d \n", head->val);
 }
 
 typedef struct __lock_t{
@@ -48,19 +48,16 @@ lock_t mutex;
 int loops;
 
 int TestAndSet(int *ptr, int new){
-	//Enter code here
 	int old = *ptr; 
 	*ptr = new; 
 	return old;
 }
 
 void init(lock_t *mutex){
-	//Enter code here
 	mutex->flag = 0;
 }
 
 void lock(lock_t *mutex){
-	//Enter code here
 	while(TestAndSet(&mutex->flag, 1)==1);
 }
 
@@ -71,10 +68,8 @@ void unlock(lock_t *mutex){
 
 void* run(){
 	for(int i = 0; i < loops; i++){
-		//Enter code here
 		lock(&mutex);
         addToFirst(size);
-		//Enter code here
 		unlock(&mutex);
 	}
 	return NULL;
@@ -101,18 +96,12 @@ int main(int argc, char * argv[]){
 		pthread_join(threads[i],NULL);
 	}
 
-	printf("The value of size is: %d\n", size);
+	printf("TLinked list size is: %d\n", size);
 
     print_list();
 
     //release momery
-    if(start != NULL){
-        while (start !=NULL){
-            Node * temp = start;         
-            start = start->next;
-            free(temp);
-        }
-    }
+    free(head);
 
 	return 0;
 }

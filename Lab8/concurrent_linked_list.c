@@ -23,16 +23,18 @@ insert() adds the value at the head(first)
 */
 void insert(int value){
     //Allocate memory equal to node size
-    node_t *n = malloc(sizeof(node_t));
+    node_t *t;
 
-    if (n == NULL){
+    t = malloc(sizeof(node_t));
+
+    if (t == NULL){
         fprintf(stderr, "Cannot allocate memory");
         exit(1);
     }
     
-    n->val = value;   //set value of node
-    n->next = start;  //set next of node
-    start = n; 
+    t->val = value;   //set value of node
+    t->next = start;  //set next of node
+    start = t; 
     list_size =  list_size + 1;
     return;
 }
