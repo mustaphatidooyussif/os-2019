@@ -103,3 +103,41 @@ int main() {
 
     return 0;
 }
+
+char * get_command(char *s){
+    //char **command = malloc(8 * sizeof(char *));
+    char *separator = " ";
+    char *parsed;
+    int index = 0;
+
+    if(command == NULL){
+        printf("Out of memory");
+        exit(1);
+    }
+
+    parsed = strtok(input, separator);  //split with the strsep method instead
+    while (parsed != NULL) {
+        command[index] = parsed;
+        index++;
+
+        parsed = strtok(NULL, separator);
+    }
+
+    command[index] = NULL;
+	return command;
+	}
+
+    char *sep = " ";
+    char *parsed_command;
+    int index = 0;
+
+    parsed_command = strtok(input, sep);  //split with the strsep method instead
+    while (parsed_command != NULL) {
+        command[index] = parsed_command;
+        index++;
+
+        parsed_command = strtok(NULL, sep);
+    }
+
+    command[index] = NULL;
+	return 1;

@@ -10,7 +10,8 @@
 #define COMMANDS 900
 
 
-//creating a global array to keep track of the commands that are being provided by the user
+//creating a global array to keep track of the commands that 
+//are being provided by the user
 char *commands[900];
 char *directories[900];
 int num_of_commands = 0;
@@ -79,37 +80,8 @@ int parallel_check_file(char *c){
 	}
 
 
-
-//stringInput() function splits the input provided by the user into tokens and places 
-//them in an array
-char ** get_command(char *s){
-    //char **command = malloc(8 * sizeof(char *));
-	char * command[10];
-    char *separator = " ";
-    char *parsed;
-    int index = 0;
-
-    if(command == NULL){
-        printf("Out of memory");
-        exit(1);
-    }
-
-    parsed = strtok(input, separator);  //split with the strsep method instead
-    while (parsed != NULL) {
-        command[index] = parsed;
-        index++;
-
-        parsed = strtok(NULL, separator);
-    }
-
-    command[index] = NULL;
-	return command;
-	}
-
-}
-
 //helper function to print content of string array
-void print_array(char **arr){
+void print_array(char *arr[]){
 	int size = sizeof(arr)/sizeof(arr[0]);
 	for(int i; i<size; i ++ ){
 		printf("%s", arr[i]);
@@ -131,8 +103,11 @@ int check_parallel(){
 	
 	}
 	
+//split_input() function splits the input provided by the user into tokens and places 
+//them in an array
+int split_input(char *s){
 
-
+}
 	
 //the parallel_commands() function is responsible for performing the parallel commands provided by the user
 int parallel_commands(){
@@ -151,8 +126,14 @@ int main(int argc,char *argv[]){
 		character_len = getline(&command, &command_len, stdin);  //get the command 
 		printf("%s", command);
 
-		char **output = get_command(command);
-		print_array(output);
+		//add command to commands 
+		commands[num_of_commands] = command;
+		num_of_commands ++;
+
+		//print commands
+		print_array(commands);
+		//char **output = get_command(command);
+		//print_array(output);
 		break;
 	}
 
