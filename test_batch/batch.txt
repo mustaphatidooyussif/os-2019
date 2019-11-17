@@ -1,0 +1,5 @@
+ls
+mkdir try
+cat batch.txt
+grep ls batch.txt 
+cd try
