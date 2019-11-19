@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <ctype.h>
 
 #define NTHREADS 10
 #define COMMANDS 900
@@ -17,6 +18,9 @@ char *directories[900];
 int num_of_commands = 0;
 int num_elements_command = 0;
 int num_of_paths = 0;
+int num_paarsed_arguments = 0;
+char redirected_file_name[50];
+char error_message[25] = "The one and only error message.\n";
 
 //the commandstruct structure is meant to contain the number of commands 
 //and the array of commands
@@ -29,6 +33,53 @@ typedef struct __mycommands{
 
 
 __mycommands builtins;
+
+void initialize_builtin_commands(__mycommands * builtins, int num);
+char *concat(char *s1,char *s2);
+void path();
+void cd(char *d);
+char *strremove(char *str, const char *sub);
+int execute_file();
+int is_builtin_command(void);
+void *execute_builtin_cmd(void);
+void *execute_sys_cmd(void *arg);
+char *read_input(FILE *f);
+char *trim_space(char *str);
+void *execute_command(void *arg);
+int check_file(char *c);
+int parallel_check_file(char *c);
+int check_redirect();
+void redirection();
+int check_parallel();
+int split_input(char *s);
+int parallel_commands();
+void print_array(char *arr[]);
+
+
+//the main function of the wish command is going to simulate a shell program.
+int main(int argc,char *argv[]){
+
+	initialize_builtin_commands(&builtins, 3);
+
+	directories[0] = "/bin";  //initial shell path
+
+	if (argc == 1){
+		/*Shell is in interactive mode*/
+		execute_command(NULL);
+
+	}else if (argc == 2){
+		/*Shell is in batch mode*/
+		execute_command(argv[1]);
+
+	}else{
+		/*Error when more than one parameter passed  */
+
+		fprintf(stderr, "program takes zero argument or one argument.\n\nUsage: program [optional]\n");
+		exit(1);
+	}
+	
+	return 0;
+	}
 
 //initialize_builtin_commands() initializes the builtin commands
 void initialize_builtin_commands(__mycommands * builtins, int num){
@@ -44,27 +95,23 @@ char *concat(char *s1,char *s2){
 	return s1;
 	}
 
-
+ 
 //path() provides different paths that a file can be located in and executed.
 void path(){
-	printf("Path is called\n");
-
-	//number of paths
-    printf("%s, %s , %s %s \n", commands[0], commands[1], commands[2], commands[3]);
-
-	/*Allocate memory for all the paths inside the directory array.*/
-	for(int i=1;i <= num_of_paths; i++){
+	int i  = 1;
+	while (commands[i] != NULL){
 		directories[i-1] = malloc(strlen(commands[i])+1);  
 		strcpy(directories[i-1], commands[i]);
-	    }
+		i ++;
+	}
+
+	commands[i] = NULL; 
 	}
 	
 	
-	
+
 //cd() changes the currennt directory of the wish bash shell
 void cd(char *d){
-	printf(" Cd is called\n");
-
 	if(commands[2] != NULL ){  //more than one path specified
 		fprintf(stderr, "Too many arguments\n");
 
@@ -129,41 +176,80 @@ void *execute_builtin_cmd(void){
 
 //execute_sys_cmd() executes my system commands.
 void *execute_sys_cmd(void *arg){
-   printf("Exec syst cmd is called\n");
-
    pid_t pid;
    char *path;
    char *exec_file;
    
-   printf("%d", num_of_paths);
-
-   print_array(directories);
-
-   for(int i = 0; i < num_of_paths; i++){
+   int i = 0;
+   while(directories[i] != NULL){
 	   path = directories[i];
-	   printf("%s ------------", path);
 	   exec_file = malloc(strlen(path)+ strlen(commands[0]) + 1);  //path + command e.g /bin/ls
 	   strcpy(exec_file, path); 
 	   exec_file = concat(exec_file, commands[0]);
-	   printf("%s", exec_file);
 
+	   if (check_file(exec_file)){
 
+		   pid = fork();
+
+		   if(pid < 0){
+			    /*child process*/-
+				fprintf(stderr, "Fork failed");
+		   }else if(pid == 0){
+				//int arg_size = 10;
+				//int fd = open("foo.txt", O_RDWR|O_TRUNC, 100);
+				//TODO: Standard error to file.
+
+				char **array = malloc(10 * sizeof(char*));
+
+		   		array[0] = exec_file; 
+		        
+		   		for(int i=0; i < num_paarsed_arguments; i ++){
+						
+						//if redirection, do not add the last 2 items
+					   /*if(check_redirect()){
+						   break; 
+					   }*/
+			   		array[i+1] = commands[i+1];
+		   		}
+		   
+		   		//dup2(fd, 1);
+
+		   		if(execv(exec_file, array) < 0){
+			   		fprintf(stderr, "Cannot execute command");
+			   			//exit(1);
+		   		}
+					
+				free(array);
+		   }else {
+				wait(NULL);
+				//close file here if redirection is set
+
+		   }
+
+	   }else{
+		   printf("No executable\n"); //Change error message
+		   printf("Remember to set path before running system commands.\n");
+	   }
+	   i ++;
+
+	   //TODO: free exec_file here
+	   free(exec_file); 
    }
 	
 
 return NULL;
 }
 
-char *read_input(void){
+//read_input() reads the input provided by the user. 
+char *read_input(FILE *f){
 	char *input_buffer = NULL;
     size_t input_buffer_size = 0;
-    getline(&input_buffer, &input_buffer_size, stdin);
-
+    getline(&input_buffer, &input_buffer_size, f);
 	return input_buffer;
 }
 
 //trim_space() removes leadning and trailing spaces from string. 
-char *trim_space(const char *str){
+char *trim_space(char *str){
 	//char *start_str = strdup(str); 
 	int str_len = 0;
 
@@ -176,7 +262,7 @@ char *trim_space(const char *str){
 	str_len = strlen(str);
 
 	if(str_len == 0){  
-		return str_len;
+		return str;
 	}
 
 	char *end_str = strdup(str);
@@ -199,11 +285,37 @@ void *execute_command(void *arg){
 			fprintf(stderr, "Cannot open file");
 			exit(EXIT_FAILURE);
 		}
+
+		char *command = NULL;
+		size_t input_buffer_size = 0;
+		char *str = NULL;
+		char *parsed_cmd =  NULL;
+
+		while (getline(&command, &input_buffer_size, batch_file) !=-1){ //TODO: Refactor this to use read_input fxn. 
+			str = malloc( strlen( command ? command : "\n"));
+		    
+			if( str == NULL){
+				fprintf(stderr, "Out of memory\n");
+				exit(EXIT_FAILURE);
+			}
+			
+			//trim_space()
+			parsed_cmd = strremove(str, command);
+			num_paarsed_arguments = split_input(parsed_cmd);
+
+			if(is_builtin_command() == 1){
+				execute_builtin_cmd();
+			}else{
+				execute_sys_cmd(NULL);
+			}
+
+			if(str != NULL)
+				free(str);
+		}
 	}else{
 		do{
-			int num_arguments;
 			printf("wish> ");
-			char *command = read_input();
+			char *command = read_input(stdin);
 
 			//remove newline character, leading and trailing space  before splitting. 
 			//sub has length of command string or length of new line if no command is passed. 
@@ -220,7 +332,7 @@ void *execute_command(void *arg){
 			//trim_space()
 			parsed_cmd = strremove(str, command);
 
-			num_arguments = split_input(parsed_cmd);
+			num_paarsed_arguments = split_input(parsed_cmd);
 
 			/*number of arguments are the same as paths (for the path command)*/
 
@@ -243,7 +355,14 @@ void *execute_command(void *arg){
 
 //check_file() function checks to see if a file can be found in any of the directories and if it is executable
 int check_file(char *c){
-	
+	 int is_exec = 0;
+
+	 if(access(c, X_OK) ==0){
+		 is_exec = 1;
+	 }
+
+	 return is_exec;
+
 	}
 
 //parallel_check_file() is responsible for checking whether a file provided through parallel commands is executable.
@@ -254,17 +373,31 @@ int parallel_check_file(char *c){
 
 //the check_redirect() function checks to see whether the commands that the user provides contains '>'
 int check_redirect(){
-	
+	char *redirect_char = ">"; 
+	int index = 0;
+	int has_redirect = 0;
+
+	while (commands[index] !=NULL){
+		if(strcmp(commands[index], redirect_char) == 0){
+			has_redirect = 1;
+			break; 
+		}
+		index ++;
+	}
+
+	return has_redirect;
 	}
 
 //the redirect() function performs the redirects the output of the commands provided into the given file
 void redirection(){
-		
+	int fd = open("foo.txt", O_WRONLY|O_CREAT, 0666);
+	close(1);//Close stdout
+	dup2(fd, 1);
 	}
 
 //the check_parallel() function is responsible to checkking if the command provided by the user involves the execution of parallel commands
 int check_parallel(){
-	
+
 	}
 	
 //split_input() function splits the input provided by the user into tokens and places 
@@ -278,6 +411,7 @@ int split_input(char *s){
  input_string = strdup(s);  //Assign string. This way will prevent compiler warnings. 
 
   while((input_cmd = strsep(&input_string, sep)) != NULL){
+
 	  commands[num_arguments] = input_cmd;
 	  num_arguments ++;
   }
@@ -299,28 +433,3 @@ void print_array(char *arr[]){
 		index ++;
 	}
 }
-
-//the main function of the wish command is going to simulate a shell program.
-int main(int argc,char *argv[]){
-
-	initialize_builtin_commands(&builtins, 3);
-
-	directories[0] = "/bin";  //initial shell path
-
-	if (argc == 1){
-		/*Shell is in interactive mode*/
-		execute_command(NULL);
-
-	}else if (argc == 2){
-		/*Shell is in batch mode*/
-		execute_command(argv[1]);
-
-	}else{
-		/*Error when more than one parameter passed  */
-
-		fprintf(stderr, "Please type wish --help");
-		exit(EXIT_FAILURE);
-	}
-	
-	return 0;
-	}
