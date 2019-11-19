@@ -8,7 +8,7 @@
 char *allocate_buffer(void)
 {
         char *buffer = NULL;
-        ssize_t size = 0;
+        size_t size = 0;
         getline(&buffer, &size, stdin);
         return buffer;
 }
@@ -111,9 +111,6 @@ int exec_everything()
 		        free(array);
 
 		}while(1);
-		
-
-
         
 }
 
