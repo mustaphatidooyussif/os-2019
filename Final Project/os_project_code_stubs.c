@@ -20,7 +20,8 @@ int num_elements_command = 0;
 int num_of_paths = 0;
 int num_paarsed_arguments = 0;
 char redirected_file_name[50];
-char error_message[25] = "The one and only error message.\n";
+char error_message[40] = "The one and only error message.\n";
+int num_parallel_cmds = 0;
 
 //the commandstruct structure is meant to contain the number of commands 
 //and the array of commands
@@ -183,6 +184,8 @@ void *execute_sys_cmd(void *arg){
    int i = 0;
    while(directories[i] != NULL){
 	   path = directories[i];
+
+	   //first chec
 	   exec_file = malloc(strlen(path)+ strlen(commands[0]) + 1);  //path + command e.g /bin/ls
 	   strcpy(exec_file, path); 
 	   exec_file = concat(exec_file, commands[0]);
@@ -209,6 +212,7 @@ void *execute_sys_cmd(void *arg){
 					   /*if(check_redirect()){
 						   break; 
 					   }*/
+					   printf("%d, %s\n", i, commands[i]);
 			   		array[i+1] = commands[i+1];
 		   		}
 		   
@@ -303,6 +307,14 @@ void *execute_command(void *arg){
 			parsed_cmd = strremove(str, command);
 			num_paarsed_arguments = split_input(parsed_cmd);
 
+			if(check_parallel() > 0){
+				//execute in parallel mode.
+				printf("EXecute in parallel\n");
+			}else{
+				//execute in single mode. 
+				printf("EXecute in single\n");
+			}
+
 			if(is_builtin_command() == 1){
 				execute_builtin_cmd();
 			}else{
@@ -334,12 +346,23 @@ void *execute_command(void *arg){
 
 			num_paarsed_arguments = split_input(parsed_cmd);
 
-			/*number of arguments are the same as paths (for the path command)*/
+			//check if the command is multiple. ( > 0 for multiple)
+			num_parallel_cmds = check_parallel() ;
 
-			if(is_builtin_command() == 1){
-				execute_builtin_cmd();
+			if(num_parallel_cmds > 0){
+				//execute in parallel mode.
+				printf("EXecute in parallel\n");
+				printf("%d \n", num_parallel_cmds);
+
 			}else{
-				execute_sys_cmd(NULL);
+				//execute in single mode. 
+				printf("EXecute in single\n");
+
+				if(is_builtin_command() == 1){
+					execute_builtin_cmd();
+				}else{
+					execute_sys_cmd(NULL);
+				}
 			}
 
 			if(str != NULL)
@@ -397,7 +420,18 @@ void redirection(){
 
 //the check_parallel() function is responsible to checkking if the command provided by the user involves the execution of parallel commands
 int check_parallel(){
+	char *parallel_char = "&"; 
+	int index = 0;
+	int num_parallel_cmd = 0;
 
+	while (commands[index] !=NULL){
+		if(strcmp(commands[index], parallel_char) == 0){
+			num_parallel_cmd ++;
+		}
+		index ++;
+	}
+
+	return num_parallel_cmd;
 	}
 	
 //split_input() function splits the input provided by the user into tokens and places 
@@ -406,11 +440,15 @@ int split_input(char *s){
 
   int num_arguments = 0;
   char *sep = " ";
-  char *input_cmd, *input_string;
+  char *input_cmd, *input_string, *redirect_char = ">";
 
  input_string = strdup(s);  //Assign string. This way will prevent compiler warnings. 
 
   while((input_cmd = strsep(&input_string, sep)) != NULL){
+      //check if redirection character is there
+	  /*if(strcmp(input_cmd, redirect_char) == 0){
+
+	  } */
 
 	  commands[num_arguments] = input_cmd;
 	  num_arguments ++;
@@ -422,7 +460,12 @@ int split_input(char *s){
 	
 //the parallel_commands() function is responsible for performing the parallel commands provided by the user
 int parallel_commands(){
-	
+	//number of ampersands + 1= num_parallel_cmds 
+	int c = 10;
+	pid_t pids[num_parallel_cmds + 1];
+
+	//char **parallel_commands_array = malloc(num_parallel_cmds * sizeof(char *))
+
 	}
 	
 //helper function to print content of string array
