@@ -43,9 +43,9 @@ void path();
 void cd(char *d);
 char *strremove(char *str, const char *sub);
 int execute_file();
-int is_builtin_command(void);
-void *execute_builtin_cmd(void);
-void *execute_sys_cmd(void *arg);
+int is_builtin_command(char *s);
+void *execute_builtin_cmd(char *s);
+void *execute_sys_cmd(char *arg[]);
 char *read_input(FILE *f);
 char *trim_space(char *str);
 void *execute_command(void *arg);
@@ -59,7 +59,8 @@ int parallel_commands();
 void print_array(char *arr[]);
 void reset_variables(void);
 char *search_path(char *arr[]);
-
+void signal_handler(int signal_code);
+void current_directory();
 
 //the main function of the wish command is going to simulate a shell program.
 int main(int argc,char *argv[]){
@@ -112,8 +113,6 @@ void path(){
 
 	commands[i] = NULL; 
 	}
-	
-	
 
 //cd() changes the currennt directory of the wish bash shell
 void cd(char *d){
@@ -124,7 +123,7 @@ void cd(char *d){
 		printf("cd takes a path as argument\n");
 	}else{
 		if(chdir(commands[1]) == 0){
-			printf("You are not dir: %s\n", commands[1]);
+			printf("\n");
 		}else{
 			fprintf(stderr, "wish: cd: %s : No such file or directory\n" , commands[1]);
 		}
@@ -151,15 +150,15 @@ int execute_file(){
 	}
 
 
-int is_builtin_command(void){
+int is_builtin_command(char *s){
 
 	int is_builtin = 0; 
 	
-	if(strcmp(commands[0], builtins.builtin_commands[0])==0){ //exit
+	if(strcmp(s, builtins.builtin_commands[0])==0){ //exit
 		is_builtin = 1;
-	}else if(strcmp(commands[0], builtins.builtin_commands[1])==0){ //cd
+	}else if(strcmp(s, builtins.builtin_commands[1])==0){ //cd
 		is_builtin = 1;
-	}else if(strcmp(commands[0], builtins.builtin_commands[2])==0){ //path
+	}else if(strcmp(s, builtins.builtin_commands[2])==0){ //path
 		is_builtin =  1;
 	}
 
@@ -167,12 +166,12 @@ int is_builtin_command(void){
 }
 
 //execute_builtin_cmd() executes my built in commands.
-void *execute_builtin_cmd(void){
-	if(strcmp(commands[0], builtins.builtin_commands[0]) == 0){ //exit
+void *execute_builtin_cmd(char *s){
+	if(strcmp(s, builtins.builtin_commands[0]) == 0){ //exit
 		exit(0);
-	}else if(strcmp(commands[0], builtins.builtin_commands[1]) == 0){ //cd
-		cd(commands[0]);
-	}else if(strcmp(commands[0], builtins.builtin_commands[2]) == 0){ //path
+	}else if(strcmp(s, builtins.builtin_commands[1]) == 0){ //cd
+		cd(s);
+	}else if(strcmp(s, builtins.builtin_commands[2]) == 0){ //path
 		path();
 	}
 
@@ -181,12 +180,12 @@ void *execute_builtin_cmd(void){
 
 char *search_path(char *arr[]){
 	int i = 0;
-	
 	char *exec_file  = NULL;
-
 	while (arr[i] != NULL){
+
 		if(check_file(arr[i]) == 1) {
 			exec_file =  arr[i];
+			return exec_file;
 		}
 
 		i++; 
@@ -194,8 +193,9 @@ char *search_path(char *arr[]){
 
 	return exec_file; 
 }
+
 //execute_sys_cmd() executes my system commands.
-void *execute_sys_cmd(void *arg){
+void *execute_sys_cmd(char *arg[]){
    pid_t pid;
    char *path;
    char *exec_file;
@@ -208,7 +208,7 @@ void *execute_sys_cmd(void *arg){
 	   path = directories[index];
 
 	   //first chec
-	   exec_file = malloc(strlen(path)+ strlen(commands[0]) + 1);  //path + command e.g /bin/ls
+	   exec_file = malloc(strlen(path)+ strlen(arg[0]) + 1);  //path + command e.g /bin/ls
 	   strcpy(exec_file, path); 
 	   
 	   char last_char = exec_file[strlen(exec_file)-1];
@@ -217,8 +217,7 @@ void *execute_sys_cmd(void *arg){
 	   if(last_char != slash){
 	   		strncat(exec_file, &slash, 1); //add ending slash
 	   }
-
-	   exec_file = concat(exec_file, commands[0]);
+	   exec_file = concat(exec_file, arg[0]);
 
 	   environment_path[index] = exec_file;
 	   index ++; 
@@ -235,16 +234,12 @@ void *execute_sys_cmd(void *arg){
 			    /*child process*/-
 				fprintf(stderr, "Fork failed");
 		   }else if(pid == 0){
-				//int arg_size = 10;
-				//int fd = open("foo.txt", O_RDWR|O_TRUNC, 100);
-				//TODO: Standard error to file.
-
 				char **array = malloc(10 * sizeof(char*));
 
-		   		array[0] = exec_file; 
+		   		array[0] = executable_path; 
 		        
 		   		for(int i=0; i < num_paarsed_arguments; i ++){
-			   		array[i+1] = commands[i+1];
+			   		array[i+1] = arg[i+1];
 		   		}
 
 				if(redirected_file_name != NULL){
@@ -259,17 +254,15 @@ void *execute_sys_cmd(void *arg){
 					}
 				}
 		   		//dup2(fd, 1);
+				printf("command: %s\n", executable_path);
 
-		   		if(execv(exec_file, array) < 0){
-			   		fprintf(stderr, "Cannot execute command");
+		   		if(execv(executable_path, array) < 0){
+			   		fprintf(stderr, "Cannot execute command\n");
 			   			//exit(1);
 		   		}
 					
 				free(array);
 
-				//if(executable_path != NULL){
-				//	free(executable_path); 
-				//}
 		   }else {
 				wait(NULL);
 				//close file here if redirection is set
@@ -285,12 +278,6 @@ void *execute_sys_cmd(void *arg){
 	if(exec_file != NULL){
 		free(exec_file); 
 	}
-
-
-	//if(path != NULL){
-	//  free(path); 
-	//}
-
 	return NULL;
 }
 
@@ -324,6 +311,7 @@ char *trim_space(char *str){
 		str_len --;
 	}
 
+	end_str[str_len] = '\0';
 	return end_str;
 }
 
@@ -359,25 +347,21 @@ void *execute_command(void *arg){
 			}
 
 			//check if & exist, if exist, how many? 
-			
-
-			num_parallel_cmds = check_parallel(command)
+			num_parallel_cmds = check_parallel(command);
 			if(num_parallel_cmds > 1){
 				//execute in parallel mode.
 				printf("EXecute in parallel\n");
 				parallel_commands();
 
 			}else{
-				//trim_space()
 				parsed_cmd = strremove(str, command);
-
-				num_paarsed_arguments = split_input(parsed_cmd);
+				num_paarsed_arguments = split_input(trim_space(parsed_cmd));
 
 				//execute in single mode. 
-				if(is_builtin_command() == 1){
-					execute_builtin_cmd();
-				}else{
-					execute_sys_cmd(NULL);
+				if(is_builtin_command(commands[0]) == 1){
+					execute_builtin_cmd(commands[0]);
+				}else if(strlen(commands[0]) > 0){
+					execute_sys_cmd(commands);
 				}
 
 			}
@@ -386,8 +370,11 @@ void *execute_command(void *arg){
 				free(str);
 		}
 	}else{
+
+		signal(SIGINT, signal_handler);
+
 		do{
-			printf("wish> ");
+			current_directory();
 			char *command = read_input(stdin);
 
 			//remove newline character, leading and trailing space  before splitting. 
@@ -418,16 +405,14 @@ void *execute_command(void *arg){
 
 			}else{
 				//execute in single mode. 
-
-				//trim_space()
 				parsed_cmd = strremove(str, command);
 
-				num_paarsed_arguments = split_input(parsed_cmd);
+				num_paarsed_arguments = split_input(trim_space(parsed_cmd));
 
-				if(is_builtin_command() == 1){
-					execute_builtin_cmd();
-				}else{
-					execute_sys_cmd(NULL);
+				if(is_builtin_command(commands[0]) == 1){
+					execute_builtin_cmd(commands[0]);
+				}else if(strlen(commands[0]) > 0){
+					execute_sys_cmd(commands);
 				}
 			}
 
@@ -447,7 +432,9 @@ void *execute_command(void *arg){
 int check_file(char *c){
 	 int is_exec = 0;
 
-	 if(access(c, X_OK) ==0){
+	printf("%d\n", access(c, X_OK));
+	
+	 if(access(c, X_OK) == 0){
 		 is_exec = 1;
 	 }
 
@@ -552,10 +539,27 @@ int parallel_commands(){
     /* Start children. */
     for (i = 0; i < num_parallel_cmds; ++i) {
 		if ((pids[i] = fork()) < 0) {
-			perror("fork");
-			abort();
+			fprintf(stderr, "Cannot for child %d", i);
 		} else if (pids[i] == 0) {
-			//DoWorkInChild();
+
+			char *parsed_cmd =  NULL;
+			char *str = NULL;
+
+			str = malloc( strlen( parallel_commands_arr[i] ? parallel_commands_arr[i] : "\n"));
+			//trim_space()
+			parsed_cmd = strremove(str, parallel_commands_arr[i]);
+
+			num_paarsed_arguments = split_input(trim_space(parsed_cmd));
+
+			//execute in single mode. 
+			printf("%s\n", commands[0]);
+
+			if(is_builtin_command(commands[0]) == 1){
+				execute_builtin_cmd(commands[0]);
+			}else{
+				execute_sys_cmd(commands);
+			}
+			
 			printf(" child %d\n", i);
 			exit(0);
 		}
@@ -589,5 +593,19 @@ void reset_variables(void){
 	redirected_file_name =  NULL;
 	num_parallel_cmds = 0;
 	redirect_fd = 0; 
+	//environment_path = NULL; 
 
+}
+
+void signal_handler(int signal_code){
+	signal(SIGINT, signal_handler);
+	fflush(stdout);
+}
+
+void current_directory(){
+	char _cwd[900];
+	if(getcwd(_cwd, sizeof(_cwd)) != NULL){
+		printf("%s", _cwd);
+		printf("/wish> ");
+	}
 }
