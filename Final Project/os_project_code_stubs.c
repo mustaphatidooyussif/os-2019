@@ -58,6 +58,8 @@ int split_input(char *s);
 int parallel_commands();
 void print_array(char *arr[]);
 void reset_variables(void);
+char *search_path(char *arr[]);
+
 
 //the main function of the wish command is going to simulate a shell program.
 int main(int argc,char *argv[]){
@@ -177,6 +179,21 @@ void *execute_builtin_cmd(void){
 	return NULL;
 }
 
+char *search_path(char *arr[]){
+	int i = 0;
+	
+	char *exec_file  = NULL;
+
+	while (arr[i] != NULL){
+		if(check_file(arr[i]) == 1) {
+			exec_file =  arr[i];
+		}
+
+		i++; 
+	}
+
+	return exec_file; 
+}
 //execute_sys_cmd() executes my system commands.
 void *execute_sys_cmd(void *arg){
    pid_t pid;
@@ -184,9 +201,11 @@ void *execute_sys_cmd(void *arg){
    char *exec_file;
    char slash = '/';
 
-   int i = 0;
-   while(directories[i] != NULL){
-	   path = directories[i];
+   char *environment_path[900];
+   int index =  0;
+
+   while(directories[index] != NULL){
+	   path = directories[index];
 
 	   //first chec
 	   exec_file = malloc(strlen(path)+ strlen(commands[0]) + 1);  //path + command e.g /bin/ls
@@ -201,9 +220,14 @@ void *execute_sys_cmd(void *arg){
 
 	   exec_file = concat(exec_file, commands[0]);
 
-	   if (check_file(exec_file)){
+	   environment_path[index] = exec_file;
+	   index ++; 
+   }
 
-		   pid = fork();
+	char *executable_path = search_path(environment_path); 
+	//printf("%s\n", executable_path);
+	if(executable_path != NULL){
+		pid = fork();
 
 		   if(pid < 0){
 			    /*child process*/-
@@ -218,12 +242,6 @@ void *execute_sys_cmd(void *arg){
 		   		array[0] = exec_file; 
 		        
 		   		for(int i=0; i < num_paarsed_arguments; i ++){
-						
-						//if redirection, do not add the last 2 items
-					   /*if(check_redirect()){
-						   break; 
-					   }*/
-					   printf("%d, %s\n", i, commands[i]);
 			   		array[i+1] = commands[i+1];
 		   		}
 
@@ -246,27 +264,32 @@ void *execute_sys_cmd(void *arg){
 		   		}
 					
 				free(array);
+
+				//if(executable_path != NULL){
+				//	free(executable_path); 
+				//}
 		   }else {
 				wait(NULL);
 				//close file here if redirection is set
 				if(redirect_fd){
 					fflush(stdout); 
 				}
-
 		   }
+	}else{
+		printf("No executable\n"); //Change error message
+		printf("Remember to set path before running system commands.\n");
+	}
 
-	   }else{
-		   printf("No executable\n"); //Change error message
-		   printf("Remember to set path before running system commands.\n");
-	   }
-	   i ++;
+	if(exec_file != NULL){
+		free(exec_file); 
+	}
 
-	   //TODO: free exec_file here
-	   free(exec_file); 
-   }
-	
 
-return NULL;
+	//if(path != NULL){
+	//  free(path); 
+	//}
+
+	return NULL;
 }
 
 //read_input() reads the input provided by the user. 
