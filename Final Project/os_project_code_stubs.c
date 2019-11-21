@@ -19,9 +19,11 @@ int num_of_commands = 0;
 int num_elements_command = 0;
 int num_of_paths = 0;
 int num_paarsed_arguments = 0;
-char redirected_file_name[50];
+char *redirected_file_name =  NULL;
 char error_message[40] = "The one and only error message.\n";
 int num_parallel_cmds = 0;
+int redirect_fd; 
+
 
 //the commandstruct structure is meant to contain the number of commands 
 //and the array of commands
@@ -49,20 +51,20 @@ char *trim_space(char *str);
 void *execute_command(void *arg);
 int check_file(char *c);
 int parallel_check_file(char *c);
-int check_redirect();
-void redirection();
+int check_redirect(char *s);
+void *redirection(char *s);
 int check_parallel();
 int split_input(char *s);
 int parallel_commands();
 void print_array(char *arr[]);
-
+void reset_variables(void);
 
 //the main function of the wish command is going to simulate a shell program.
 int main(int argc,char *argv[]){
 
 	initialize_builtin_commands(&builtins, 3);
 
-	directories[0] = "/bin";  //initial shell path
+	directories[0] = "/bin/";  //initial shell path
 
 	if (argc == 1){
 		/*Shell is in interactive mode*/
@@ -180,7 +182,8 @@ void *execute_sys_cmd(void *arg){
    pid_t pid;
    char *path;
    char *exec_file;
-   
+   char slash = '/';
+
    int i = 0;
    while(directories[i] != NULL){
 	   path = directories[i];
@@ -188,6 +191,14 @@ void *execute_sys_cmd(void *arg){
 	   //first chec
 	   exec_file = malloc(strlen(path)+ strlen(commands[0]) + 1);  //path + command e.g /bin/ls
 	   strcpy(exec_file, path); 
+	   
+	   char last_char = exec_file[strlen(exec_file)-1];
+
+		//if path has no slash at the end. 
+	   if(last_char != slash){
+	   		strncat(exec_file, &slash, 1); //add ending slash
+	   }
+
 	   exec_file = concat(exec_file, commands[0]);
 
 	   if (check_file(exec_file)){
@@ -215,7 +226,18 @@ void *execute_sys_cmd(void *arg){
 					   printf("%d, %s\n", i, commands[i]);
 			   		array[i+1] = commands[i+1];
 		   		}
-		   
+
+				if(redirected_file_name != NULL){
+					redirect_fd = open(redirected_file_name, O_WRONLY|O_CREAT, 0666);
+					
+					if(dup2(redirect_fd, fileno(stdout)) == -1){
+						fprintf(stderr, "connot redirect std output");
+
+					}
+					if(dup2(redirect_fd, fileno(stderr)) == -1){
+						fprintf(stderr, "connot redirect std err");
+					}
+				}
 		   		//dup2(fd, 1);
 
 		   		if(execv(exec_file, array) < 0){
@@ -227,6 +249,9 @@ void *execute_sys_cmd(void *arg){
 		   }else {
 				wait(NULL);
 				//close file here if redirection is set
+				if(redirect_fd){
+					fflush(stdout); 
+				}
 
 		   }
 
@@ -248,7 +273,7 @@ return NULL;
 char *read_input(FILE *f){
 	char *input_buffer = NULL;
     size_t input_buffer_size = 0;
-    getline(&input_buffer, &input_buffer_size, f);
+    ssize_t characters = getline(&input_buffer, &input_buffer_size, f);
 	return input_buffer;
 }
 
@@ -302,23 +327,31 @@ void *execute_command(void *arg){
 				fprintf(stderr, "Out of memory\n");
 				exit(EXIT_FAILURE);
 			}
+
+			//check if > exist in string. 
+			if(check_redirect(command) == 1){ 
+				command = redirection(command);
+			}
+
+			//check if & exist, if exist, how many? 
 			
 			//trim_space()
 			parsed_cmd = strremove(str, command);
+
 			num_paarsed_arguments = split_input(parsed_cmd);
 
 			if(check_parallel() > 0){
 				//execute in parallel mode.
 				printf("EXecute in parallel\n");
+
 			}else{
 				//execute in single mode. 
-				printf("EXecute in single\n");
-			}
+				if(is_builtin_command() == 1){
+					execute_builtin_cmd();
+				}else{
+					execute_sys_cmd(NULL);
+				}
 
-			if(is_builtin_command() == 1){
-				execute_builtin_cmd();
-			}else{
-				execute_sys_cmd(NULL);
 			}
 
 			if(str != NULL)
@@ -340,6 +373,11 @@ void *execute_command(void *arg){
 				fprintf(stderr, "Out of memory");
 				exit(EXIT_FAILURE);
 			}
+			
+			//check if > exist in string. 
+			if(check_redirect(command) == 1){ 
+				command = redirection(command);
+			}
 
 			//trim_space()
 			parsed_cmd = strremove(str, command);
@@ -356,8 +394,6 @@ void *execute_command(void *arg){
 
 			}else{
 				//execute in single mode. 
-				printf("EXecute in single\n");
-
 				if(is_builtin_command() == 1){
 					execute_builtin_cmd();
 				}else{
@@ -367,7 +403,8 @@ void *execute_command(void *arg){
 
 			if(str != NULL)
 				free(str);
-		    
+
+		    reset_variables();
 		}while(1);
 
 		
@@ -395,27 +432,40 @@ int parallel_check_file(char *c){
 
 
 //the check_redirect() function checks to see whether the commands that the user provides contains '>'
-int check_redirect(){
-	char *redirect_char = ">"; 
+int check_redirect(char *s){
 	int index = 0;
 	int has_redirect = 0;
-
-	while (commands[index] !=NULL){
-		if(strcmp(commands[index], redirect_char) == 0){
-			has_redirect = 1;
-			break; 
-		}
-		index ++;
+	char *cmd_cpy = strdup(s);
+	if(strchr(cmd_cpy, '>') != NULL){
+		has_redirect = 1;
 	}
 
-	return has_redirect;
+	return has_redirect; 
 	}
 
 //the redirect() function performs the redirects the output of the commands provided into the given file
-void redirection(){
-	int fd = open("foo.txt", O_WRONLY|O_CREAT, 0666);
-	close(1);//Close stdout
-	dup2(fd, 1);
+void * redirection(char *s){
+
+    char*tokens[700];
+
+    char *str_cmd;
+    str_cmd = strdup(s);
+
+    tokens[0] = strtok(str_cmd, ">");
+    int m = 0;
+
+    while(tokens[m]  != NULL){
+        m ++;
+        tokens[m] = strtok(NULL, ">");
+
+    }
+
+	//close(1);//Close stdout
+	//dup2(fd, 1);
+
+	redirected_file_name = tokens[1]; 
+
+	return tokens[0];
 	}
 
 //the check_parallel() function is responsible to checkking if the command provided by the user involves the execution of parallel commands
@@ -475,4 +525,15 @@ void print_array(char *arr[]){
 		printf("%s\n", arr[index]);
 		index ++;
 	}
+}
+
+void reset_variables(void){
+	num_of_commands = 0;
+	num_elements_command = 0;
+	num_of_paths = 0;
+	num_paarsed_arguments = 0;
+	redirected_file_name =  NULL;
+	num_parallel_cmds = 0;
+	redirect_fd = 0; 
+
 }
