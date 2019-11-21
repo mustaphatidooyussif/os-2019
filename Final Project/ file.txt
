@@ -1,10 +1,10 @@
 total 76
 -rwxr-xr-x 1 user user 17464 Nov 15 12:15 a.out
 -rw-r--r-- 1 user user    34 Nov 20 21:49 batch.txt
--rw-r--r-- 1 user user   462 Nov 20 22:48  file.txt
+-rw-r--r-- 1 user user   462 Nov 20 22:49  file.txt
 
 -rw-r--r-- 1 user user     0 Nov 19 09:25 file.txt
 -rw-r--r-- 1 user user    46 Nov 19 09:56 foo.txt
--rwxr-xr-x 1 user user 23512 Nov 20 22:48 os_project_code_stubs
--rw-r--r-- 1 user user 12699 Nov 20 22:48 os_project_code_stubs.c
+-rwxr-xr-x 1 user user 23512 Nov 21 04:06 os_project_code_stubs
+-rw-r--r-- 1 user user 12734 Nov 21 04:06 os_project_code_stubs.c
 -rw-r--r-- 1 user user   447 Nov 15 11:05 unix_shell_final_project.c

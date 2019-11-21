@@ -23,7 +23,7 @@ char *redirected_file_name =  NULL;
 char error_message[40] = "The one and only error message.\n";
 int num_parallel_cmds = 0;
 int redirect_fd; 
-
+char *parallel_commands_arr[900];
 
 //the commandstruct structure is meant to contain the number of commands 
 //and the array of commands
@@ -53,7 +53,7 @@ int check_file(char *c);
 int parallel_check_file(char *c);
 int check_redirect(char *s);
 void *redirection(char *s);
-int check_parallel();
+int check_parallel(char *s);
 int split_input(char *s);
 int parallel_commands();
 void print_array(char *arr[]);
@@ -224,6 +224,8 @@ void *execute_sys_cmd(void *arg){
 	   index ++; 
    }
 
+	environment_path[index] = NULL;
+	
 	char *executable_path = search_path(environment_path); 
 	//printf("%s\n", executable_path);
 	if(executable_path != NULL){
@@ -358,16 +360,19 @@ void *execute_command(void *arg){
 
 			//check if & exist, if exist, how many? 
 			
-			//trim_space()
-			parsed_cmd = strremove(str, command);
 
-			num_paarsed_arguments = split_input(parsed_cmd);
-
-			if(check_parallel() > 0){
+			num_parallel_cmds = check_parallel(command)
+			if(num_parallel_cmds > 1){
 				//execute in parallel mode.
 				printf("EXecute in parallel\n");
+				parallel_commands();
 
 			}else{
+				//trim_space()
+				parsed_cmd = strremove(str, command);
+
+				num_paarsed_arguments = split_input(parsed_cmd);
+
 				//execute in single mode. 
 				if(is_builtin_command() == 1){
 					execute_builtin_cmd();
@@ -402,21 +407,23 @@ void *execute_command(void *arg){
 				command = redirection(command);
 			}
 
-			//trim_space()
-			parsed_cmd = strremove(str, command);
-
-			num_paarsed_arguments = split_input(parsed_cmd);
-
 			//check if the command is multiple. ( > 0 for multiple)
-			num_parallel_cmds = check_parallel() ;
+			num_parallel_cmds = check_parallel(command);
 
-			if(num_parallel_cmds > 0){
+			if(num_parallel_cmds > 1){
 				//execute in parallel mode.
-				printf("EXecute in parallel\n");
+				printf("EXecute parallel\n");
 				printf("%d \n", num_parallel_cmds);
+				parallel_commands();
 
 			}else{
 				//execute in single mode. 
+
+				//trim_space()
+				parsed_cmd = strremove(str, command);
+
+				num_paarsed_arguments = split_input(parsed_cmd);
+
 				if(is_builtin_command() == 1){
 					execute_builtin_cmd();
 				}else{
@@ -492,19 +499,21 @@ void * redirection(char *s){
 	}
 
 //the check_parallel() function is responsible to checkking if the command provided by the user involves the execution of parallel commands
-int check_parallel(){
-	char *parallel_char = "&"; 
-	int index = 0;
-	int num_parallel_cmd = 0;
+int check_parallel(char *s){
 
-	while (commands[index] !=NULL){
-		if(strcmp(commands[index], parallel_char) == 0){
-			num_parallel_cmd ++;
-		}
-		index ++;
-	}
+    char *str_cmd;
+    str_cmd = strdup(s);
 
-	return num_parallel_cmd;
+    parallel_commands_arr[0] = strtok(str_cmd, "&");
+    int m = 0;
+
+    while(parallel_commands_arr[m]  != NULL){
+        m ++;
+        parallel_commands_arr[m] = strtok(NULL, "&");
+
+    }
+
+	return m;
 	}
 	
 //split_input() function splits the input provided by the user into tokens and places 
@@ -534,10 +543,32 @@ int split_input(char *s){
 //the parallel_commands() function is responsible for performing the parallel commands provided by the user
 int parallel_commands(){
 	//number of ampersands + 1= num_parallel_cmds 
-	int c = 10;
-	pid_t pids[num_parallel_cmds + 1];
+	pid_t pids[num_parallel_cmds];
 
-	//char **parallel_commands_array = malloc(num_parallel_cmds * sizeof(char *))
+
+    int i;
+    int n = num_parallel_cmds;
+
+    /* Start children. */
+    for (i = 0; i < num_parallel_cmds; ++i) {
+		if ((pids[i] = fork()) < 0) {
+			perror("fork");
+			abort();
+		} else if (pids[i] == 0) {
+			//DoWorkInChild();
+			printf(" child %d\n", i);
+			exit(0);
+		}
+    }
+
+    /* Wait for children to exit. */
+    int status;
+    pid_t pid;
+    while (n > 0) {
+		pid = wait(&status);
+		printf("Child with PID %ld exited with status 0x%x.\n", (long)pid, status);
+		--n;  // TODO(pts): Remove pid from the pids array.
+    }
 
 	}
 	
