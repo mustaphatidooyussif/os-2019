@@ -150,6 +150,7 @@ int execute_file(){
 	}
 
 
+//This function checks if the  command is a builtin or not
 int is_builtin_command(char *s){
 
 	int is_builtin = 0; 
@@ -178,12 +179,13 @@ void *execute_builtin_cmd(char *s){
 	return NULL;
 }
 
+//this searches the paths the user passed for the executable command. 
 char *search_path(char *arr[]){
 	int i = 0;
 	char *exec_file  = NULL;
 	while (arr[i] != NULL){
 
-		if(check_file(arr[i]) == 1) {
+		if(check_file(arr[i]) == 1) { //if the file is there and is executable. 
 			exec_file =  arr[i];
 			return exec_file;
 		}
@@ -207,7 +209,7 @@ void *execute_sys_cmd(char *arg[]){
    while(directories[index] != NULL){
 	   path = directories[index];
 
-	   //first chec
+	   //allocate more space. 
 	   exec_file = malloc(strlen(path)+ strlen(arg[0]) + 1);  //path + command e.g /bin/ls
 	   strcpy(exec_file, path); 
 	   
@@ -217,8 +219,11 @@ void *execute_sys_cmd(char *arg[]){
 	   if(last_char != slash){
 	   		strncat(exec_file, &slash, 1); //add ending slash
 	   }
+
+	   //join path and command
 	   exec_file = concat(exec_file, arg[0]);
 
+       //add to executable paths
 	   environment_path[index] = exec_file;
 	   index ++; 
    }
@@ -226,7 +231,7 @@ void *execute_sys_cmd(char *arg[]){
 	environment_path[index] = NULL;
 	
 	char *executable_path = search_path(environment_path); 
-	//printf("%s\n", executable_path);
+
 	if(executable_path != NULL){
 		pid = fork();
 
@@ -242,6 +247,7 @@ void *execute_sys_cmd(char *arg[]){
 			   		array[i+1] = arg[i+1];
 		   		}
 
+				//redirect output or error to file, if redirect is set. 
 				if(redirected_file_name != NULL){
 					redirect_fd = open(redirected_file_name, O_WRONLY|O_CREAT, 0666);
 					
@@ -253,7 +259,8 @@ void *execute_sys_cmd(char *arg[]){
 						fprintf(stderr, "connot redirect std err");
 					}
 				}
-		   		//dup2(fd, 1);
+
+				//execute system commands
 		   		if(execv(executable_path, array) < 0){
 			   		fprintf(stderr, "Cannot execute command\n");
 			   			//exit(1);
@@ -309,14 +316,15 @@ char *trim_space(char *str){
 		str_len --;
 	}
 
-	end_str[str_len] = '\0';
+	end_str[str_len] = '\0';  //replace newline
 	return end_str;
 }
 
 //the execute_command() function is responsble for executing the command 
 //and the parameters passed into the function.
 void *execute_command(void *arg){
-	if (arg){
+
+	if (arg){ //if file is passed, execyte batch mode. 
 		char *filename = (char *)arg;
 
 		FILE *batch_file = fopen(filename, "r");
@@ -344,7 +352,7 @@ void *execute_command(void *arg){
 				command = redirection(command);
 			}
 
-			//check if & exist, if exist, how many? 
+			//check if & exist (check for parallel commands)
 			num_parallel_cmds = check_parallel(command);
 			if(num_parallel_cmds > 1){
 				//execute in parallel mode.
@@ -516,10 +524,7 @@ int split_input(char *s){
 	
 //the parallel_commands() function is responsible for performing the parallel commands provided by the user
 int parallel_commands(){
-	//number of ampersands + 1= num_parallel_cmds 
 	pid_t pids[num_parallel_cmds];
-
-
     int i;
     int n = num_parallel_cmds;
 
@@ -533,13 +538,11 @@ int parallel_commands(){
 			char *str = NULL;
 
 			str = malloc( strlen( parallel_commands_arr[i] ? parallel_commands_arr[i] : "\n"));
-			//trim_space()
+			
+			//remove new liine, trailing and leading space before parsing. 
 			parsed_cmd = strremove(str, parallel_commands_arr[i]);
 
 			num_paarsed_arguments = split_input(trim_space(parsed_cmd));
-
-			//execute in single mode. 
-			//printf("%s\n", commands[0]);
 
 			if(is_builtin_command(commands[0]) == 1){
 				execute_builtin_cmd(commands[0]);
@@ -547,7 +550,6 @@ int parallel_commands(){
 				execute_sys_cmd(commands);
 			}
 			
-			//printf(" child %d\n", i);
 			exit(0);
 		}
     }
@@ -557,8 +559,7 @@ int parallel_commands(){
     pid_t pid;
     while (n > 0) {
 		pid = wait(&status);
-		//printf("Child with PID %ld exited with status 0x%x.\n", (long)pid, status);
-		--n;  // TODO(pts): Remove pid from the pids array.
+		--n;  
     }
 
 	}
@@ -584,11 +585,13 @@ void reset_variables(void){
 
 }
 
+//signal_handle handles CTRL-C, CTRL-D, and CTRL-D
 void signal_handler(int signal_code){
 	signal(SIGINT, signal_handler);
 	fflush(stdout);
 }
 
+//Prints the current directory + /wish>. 
 void current_directory(){
 	char _cwd[900];
 	if(getcwd(_cwd, sizeof(_cwd)) != NULL){
