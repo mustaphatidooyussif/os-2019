@@ -416,9 +416,7 @@ void *execute_command(void *arg){
 				free(str);
 
 		    reset_variables();
-		}while(1);
-
-		
+		}while(1);	
 	}
 
 	}
@@ -426,8 +424,7 @@ void *execute_command(void *arg){
 
 //check_file() function checks to see if a file can be found in any of the directories and if it is executable
 int check_file(char *c){
-	 int is_exec = 0;
-
+ 	 int is_exec = 0;
 	 if(access(c, X_OK) == 0){
 		 is_exec = 1;
 	 }
@@ -460,7 +457,7 @@ void * redirection(char *s){
     char*tokens[700];
 
     char *str_cmd;
-    str_cmd = strdup(s);
+    str_cmd = strdup(s); 
 
     tokens[0] = strtok(str_cmd, ">");
     int m = 0;
@@ -508,10 +505,6 @@ int split_input(char *s){
  input_string = strdup(s);  //Assign string. This way will prevent compiler warnings. 
 
   while((input_cmd = strsep(&input_string, sep)) != NULL){
-      //check if redirection character is there
-	  /*if(strcmp(input_cmd, redirect_char) == 0){
-
-	  } */
 
 	  commands[num_arguments] = input_cmd;
 	  num_arguments ++;

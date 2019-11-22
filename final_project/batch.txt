@@ -1,2 +1,3 @@
 path /usr/bin /bin
+ls -l
 pwd

@@ -19,7 +19,8 @@ int main(){
         perror("fork");
         abort();
     } else if (pids[i] == 0) {
-        DoWorkInChild();
+        //DoWorkInChild();
+        printf(" child %d\n", i);
         exit(0);
     }
     }
